@@ -1,0 +1,1 @@
+# TODO: Write and Describe my decision making and why we have windows bridg (camera stuff problems)
