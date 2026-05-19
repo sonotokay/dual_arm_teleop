@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="dual_ur5e">
+
+  <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+
+  <!-- Root -->
+  <link name="world"/>
+
+  <!-- Shared base plate: 0.6 m (x) x 1.2 m (y) x 0.05 m (z) -->
+  <link name="base_plate">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.6 1.2 0.05"/></geometry>
+      <material name="plate_grey"><color rgba="0.4 0.4 0.45 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.6 1.2 0.05"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="10.0"/>
+      <inertia ixx="1.205" ixy="0" ixz="0" iyy="0.302" iyz="0" izz="1.503"/>
+    </inertial>
+  </link>
+
+  <!-- Plate centered at z=0.025 so its top face sits at z=0.05 -->
+  <joint name="world_to_base_plate" type="fixed">
+    <parent link="world"/>
+    <child  link="base_plate"/>
+    <origin xyz="0 0 0.025" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Common UR5e config paths -->
+  <xacro:property name="ur5e_jl"   value="$(find ur_description)/config/ur5e/joint_limits.yaml"/>
+  <xacro:property name="ur5e_kin"  value="$(find ur_description)/config/ur5e/default_kinematics.yaml"/>
+  <xacro:property name="ur5e_phys" value="$(find ur_description)/config/ur5e/physical_parameters.yaml"/>
+  <xacro:property name="ur5e_vis"  value="$(find ur_description)/config/ur5e/visual_parameters.yaml"/>
+
+  <!-- LEFT arm: base at world (0, +0.5, 0.05) -->
+  <xacro:ur_robot
+      name="left_ur5e"
+      tf_prefix="left_"
+      parent="base_plate"
+      joint_limits_parameters_file="${ur5e_jl}"
+      kinematics_parameters_file="${ur5e_kin}"
+      physical_parameters_file="${ur5e_phys}"
+      visual_parameters_file="${ur5e_vis}"
+      generate_ros2_control_tag="false">
+    <origin xyz="0 0.5 0.025" rpy="0 0 0"/>
+  </xacro:ur_robot>
+
+  <!-- RIGHT arm: base at world (0, -0.5, 0.05) -->
+  <xacro:ur_robot
+      name="right_ur5e"
+      tf_prefix="right_"
+      parent="base_plate"
+      joint_limits_parameters_file="${ur5e_jl}"
+      kinematics_parameters_file="${ur5e_kin}"
+      physical_parameters_file="${ur5e_phys}"
+      visual_parameters_file="${ur5e_vis}"
+      generate_ros2_control_tag="false">
+    <origin xyz="0 -0.5 0.025" rpy="0 0 0"/>
+  </xacro:ur_robot>
+
+</robot>
