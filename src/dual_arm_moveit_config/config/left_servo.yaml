@@ -5,6 +5,8 @@ planning_frame: left_base_link
 ee_frame_name: left_tool0
 robot_link_command_frame: left_base_link
 
+is_primary_planning_scene_monitor: false
+
 command_in_type: "speed_units"   
 scale:
   linear: 0.4
@@ -36,3 +38,6 @@ scene_collision_proximity_threshold: 0.02
 lower_singularity_threshold: 17.0
 hard_stop_singularity_threshold: 30.0
 joint_limit_margin: 0.1
+
+incoming_command_timeout: 1.0          
+num_outgoing_halt_msgs_to_publish: 4
