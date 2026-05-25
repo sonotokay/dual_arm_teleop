@@ -3,8 +3,8 @@ from mapper_contract import HandsState, ArmMode, ArmTarget, TeleopCommand
 PINCH_OPEN_DISTANCE = 0.2
 PINCH_CLOSED_DISTANCE = 0.05
 
-XMIN, XMAX = -0.25, 0.25
-YMIN, YMAX  = 0.25, 0.60
+XMIN, XMAX = -0.5, 0.5
+YMIN, YMAX  = 0.15, 0.70
 
 def normalize_pinch(raw: float) -> float:
     span = PINCH_OPEN_DISTANCE - PINCH_CLOSED_DISTANCE
@@ -17,36 +17,20 @@ def map_range(value, in_min, in_max, out_min, out_max):
     return target_range
 
 def image_to_workspace(wrist_x, wrist_y):
-    wrist_x = map_range(wrist_x, 0, 1, XMIN, XMAX)
-    wrist_y = map_range(wrist_y, 0, 1, YMIN, YMAX)
-    return wrist_x, wrist_y
+    # Image y=0 is the top of the frame; invert so hand-up gives a larger workspace y.
+    ws_x = map_range(wrist_x, 0, 1, XMIN, XMAX)
+    ws_y = map_range(wrist_y, 0, 1, YMAX, YMIN)
+    return ws_x, ws_y
 
 def hands_to_command(hands: HandsState) -> TeleopCommand:
-    if hands.left.visible:
-        lx, ly = image_to_workspace(hands.left.wrist_x, hands.left.wrist_y)
-        left = ArmTarget(x=lx, y=ly, theta=hands.left.rotation,
-                        gripper=normalize_pinch(hands.left.pinch),
-                        mode=ArmMode.TRACKING)
-    else:
-        left = ArmTarget(
-            x=0.0,
-            y=0.0,
-            theta=0.0,
-            gripper=0.0,
-            mode=ArmMode.IDLE,
+    def to_target(obs):
+        if not obs.visible:
+            return ArmTarget(x=0.0, y=0.0, theta=0.0, gripper=0.0, mode=ArmMode.IDLE)
+        x, y = image_to_workspace(obs.wrist_x, obs.wrist_y)
+        return ArmTarget(
+            x=x, y=y, theta=obs.rotation,
+            gripper=normalize_pinch(obs.pinch),
+            mode=ArmMode.TRACKING,
         )
-    if hands.right.visible:
-        lx, ly = image_to_workspace(hands.left.wrist_x, hands.left.wrist_y)
-        right= ArmTarget(x=lx, y=ly, theta=hands.left.rotation,
-                        gripper=normalize_pinch(hands.left.pinch),
-                        mode=ArmMode.TRACKING)
-    else:
-        right = ArmTarget(
-            x=0.0,
-            y=0.0,
-            theta=0.0,
-            gripper=0.0,
-            mode=ArmMode.IDLE,
-        )
-    return TeleopCommand(hands.timestamp, left, right)
+    return TeleopCommand(hands.timestamp, to_target(hands.left), to_target(hands.right))
 
