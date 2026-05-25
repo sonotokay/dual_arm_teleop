@@ -10,7 +10,7 @@ streamed to the ROS2 workspace over TCP.
 
 ## Demo video
 
-demo_video.mp4
+[demo_video.mp4](https://drive.google.com/file/d/1fggA8urLHgsrZf1fUycZMjOpWYvoJDgj/view?usp=sharing)
 
 ## Architecture
 
