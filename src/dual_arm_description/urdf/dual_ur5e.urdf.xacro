@@ -2,6 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="dual_ur5e">
 
   <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+  <xacro:include filename="$(find dual_arm_description)/urdf/robotiq_2f_85_macro.xacro"/>
 
   <!-- Root -->
   <link name="world"/>
@@ -61,5 +62,15 @@
       generate_ros2_control_tag="false">
     <origin xyz="0 -0.5 0.025" rpy="0 0 0"/>
   </xacro:ur_robot>
+
+  <!-- LEFT gripper attached to left_tool0 -->
+  <xacro:robotiq_2f_85 prefix="left_" parent="left_tool0">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:robotiq_2f_85>
+
+  <!-- RIGHT gripper attached to right_tool0 -->
+  <xacro:robotiq_2f_85 prefix="right_" parent="right_tool0">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:robotiq_2f_85>
 
 </robot>

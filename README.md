@@ -142,16 +142,60 @@ flips to `STREAMING`. Move your hands; arms move.
 
 `ESC` quits the bridge cleanly; `Ctrl-C` exits the teleop node.
 
-### Verifying the gripper
+### Gripper visualization
+
+Start the gripper visualizer after the servo nodes are running (its own terminal):
+
+```bash
+# WSL terminal E — gripper joint state publisher
+python3 scripts/gripper_viz.py
+```
+
+Pinch thumb to index → both Robotiq 2F-85 grippers close in RViz. Spread → open.
+The node bridges `/left_gripper_cmd` and `/right_gripper_cmd` (Float64, [0=open, 1=closed])
+to the 4 gripper joints per arm on `/joint_states` at 50 Hz.
+
+To verify the raw command stream:
 
 ```bash
 ros2 topic echo /left_gripper_cmd
 ros2 topic echo /right_gripper_cmd
 ```
 
-Pinch thumb to index → values climb toward 1.0. Spread → fall toward 0.0.
-Currently there are no gripper meshes in the URDF, so this is the only
-observable signal — see Known limitations below.
+### Recording demonstration datasets
+
+The recorder captures joint positions, gripper state, and end-effector poses suitable
+for imitation learning (behaviour cloning, ACT, diffusion policy, etc.).
+
+```bash
+# WSL terminal F — recorder (starts paused)
+python3 scripts/data_recorder.py --out episodes/
+
+# Press Enter to start an episode, Enter again to stop and save.
+# Ctrl-C exits cleanly, saving any in-progress episode.
+```
+
+Each saved episode is a NumPy archive (`episodes/episode_NNNN.npz`) containing:
+
+| Array | Shape | Description |
+| --- | --- | --- |
+| `timestamps` | (T,) | Unix time in seconds |
+| `joint_names` | (12,) | Arm joint name strings |
+| `joint_positions` | (T, 12) | Arm joint angles in radians |
+| `gripper` | (T, 2) | Normalised [0=open, 1=closed]; columns: [left, right] |
+| `ee_pose_left` | (T, 7) | Left EE pose [x, y, z, qx, qy, qz, qw] in world frame |
+| `ee_pose_right` | (T, 7) | Right EE pose in world frame |
+
+Loading an episode:
+
+```python
+import numpy as np
+ep = np.load("episodes/episode_0001.npz", allow_pickle=True)
+print(ep["joint_positions"].shape)   # (T, 12)
+print(ep["ee_pose_left"].shape)      # (T, 7)
+```
+
+Pass `--episode-time 30` to auto-stop after 30 seconds per episode.
 
 ### Running the tests
 
@@ -196,26 +240,24 @@ dual_arm_teleop_ws/
 │   ├── camera_bridge.py
 │   ├── probe_camera.py             # standalone debug preview
 │   └── requirements.txt
-├── scripts/                        # WSL-side teleop node + helpers
+├── scripts/                        # WSL-side nodes + helpers
 │   ├── teleop_node.py              # main ROS node (P-controller, TF, twist + gripper pub)
+│   ├── gripper_viz.py              # bridges /left|right_gripper_cmd → /joint_states
+│   ├── data_recorder.py            # records teleoperation episodes as .npz datasets
 │   ├── teleop_mapper.py            # HandsState -> TeleopCommand in workspace coords
 │   ├── mapper_contract.py          # dataclasses (HandObservation, ArmTarget, ArmMode...)
 │   ├── one_euro.py                 # One-Euro low-pass filter
 │   └── tests/                      # pytest unit tests
 └── src/
-    ├── dual_arm_description/       # URDF (xacro) for two UR5e on a shared base plate
+    ├── dual_arm_description/       # URDF (xacro) — two UR5e + Robotiq 2F-85 grippers
+    │   └── urdf/
+    │       ├── dual_ur5e.urdf.xacro
+    │       └── robotiq_2f_85_macro.xacro   # self-contained gripper (no apt dependency)
     └── dual_arm_moveit_config/     # SRDF, MoveIt + Servo configs, launches
 ```
 
 ## Known limitations
 
-- **No gripper visualization.** The URDF places two UR5e arms on a base plate
-  but does not attach gripper meshes (Robotiq 2F-85 was the intended choice but
-  was not integrated in time). The gripper command is still published as
-  `std_msgs/Float64` on `/<side>_gripper_cmd` in the range `[0, 1]`
-  (`0 = open`, `1 = closed`) and is observable via `ros2 topic echo`. A real
-  Robotiq controller subscribing to this topic would work; the visualization
-  gap is purely cosmetic.
 - **Monocular hand tracking.** A single 2D webcam cannot reliably measure palm
   twist (the palm just gets thinner in the image with no signed direction). The
   "1D rotation" axis is therefore the angle of the wrist→middle-finger vector
